@@ -1,0 +1,52 @@
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import type { Source, State } from '../lib/model';
+
+const origin = 'http://127.0.0.1:5173';
+const login = await fetch(origin + '/signin-with-chatgpt?return_to=/', { redirect: 'manual' });
+const cookie = login.headers.get('set-cookie')?.split(';')[0];
+assert.ok(cookie);
+const headers = { Cookie: cookie!, 'Content-Type': 'application/json' };
+const get = async (path: string) => fetch(origin + '/api/workspace/' + path, { headers });
+const post = async (path: string, body: unknown) => fetch(origin + '/api/workspace/' + path, { method:'POST', headers, body: JSON.stringify(body) });
+const before = await (await get('state')).json() as State;
+const row = before.sources.find(s => s.name === 'Unit1检测卷_模板A.docx');
+assert.ok(row);
+const src = await (await get('source/' + row.id)).json() as Source;
+assert.equal(src.questions!.length,61);
+assert.equal(src.committed,false);
+assert.equal(src.report!.matchedAnswers,61);
+assert.equal(src.report!.version,'2.0');
+assert.equal(src.questions!.find(q=>q.originalNo==='29')!.imageLabels!.length,4);
+const backup = await get(`source/${src.id}/backup`);
+assert.equal(backup.status,200);
+assert.match(backup.headers.get('content-disposition')!,/attachment/);
+const old = await backup.json() as Source;
+assert.equal(old.questions!.length,19);
+assert.equal(old.id,src.id);
+assert.equal((await fetch(origin+`/api/workspace/source/${src.id}/backup`)).status,401);
+assert.equal((await post('reparse',{sourceId:before.sources.find(s=>s.committed)!.id})).status,409);
+assert.equal((await post('reparse',{sourceId:'missing-source'})).status,404);
+assert.equal((await fetch(origin+'/api/workspace/reparse',{method:'POST',headers:{...headers,Origin:'https://other.example'},body:JSON.stringify({sourceId:src.id})})).status,403);
+// Persist an unchanged draft to verify that new types and image labels survive validation.
+assert.equal((await post('draft',{sourceId:src.id,questions:src.questions})).status,200);
+const saved = await (await get(`source/${src.id}`)).json() as Source;
+assert.deepEqual(saved.questions,src.questions);
+const urls=[...new Set(saved.questions!.flatMap(q=>q.images))];
+assert.equal(urls.length,6);
+for (const url of urls) {
+    const res=await fetch(origin+url,{headers});
+    assert.equal(res.status,200); assert.match(res.headers.get('content-type')!,/^image\//); assert.ok((await res.arrayBuffer()).byteLength>100);
+}
+const original=await get(`source/${src.id}/file`);
+const bytes=new Uint8Array(await original.arrayBuffer());
+if(process.argv[2]) assert.equal(createHash('sha256').update(bytes).digest('hex'),createHash('sha256').update(readFileSync(process.argv[2])).digest('hex'));
+const form=new FormData();form.append('grade','七年级');form.append('file',new Blob([bytes]),src.name);
+const duplicate=await (await fetch(origin+'/api/workspace/import',{method:'POST',headers:{Cookie:cookie!},body:form})).json() as Source & {duplicate:boolean};
+assert.equal(duplicate.duplicate,true);assert.equal(duplicate.questions!.length,61);assert.equal(duplicate.id,src.id);
+const after=await (await get('state')).json() as State;
+assert.deepEqual(after.questions,before.questions);assert.deepEqual(after.papers,before.papers);
+assert.equal(after.sources.length,before.sources.length);
+assert.equal(after.sources.find(s=>s.id===src.id)!.count,61);
+console.log('PASS: saved 61-question draft, original SHA256 unchanged, prior 19-item backup, image labels round-trip, all 6 images accessible, repeated upload returns v2 draft, reviewed bank/papers unchanged, login/origin/committed protection.');

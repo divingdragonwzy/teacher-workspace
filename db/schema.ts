@@ -1,0 +1,4 @@
+import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
+export const sources = sqliteTable('sources', { id: text('id').primaryKey(), owner: text('owner').notNull(), name: text('name').notNull(), hash: text('hash').notNull(), data: text('data').notNull(), committed: integer('committed').notNull().default(0), createdAt: text('created_at').notNull() }, t => [uniqueIndex('source_owner_hash').on(t.owner, t.hash), index('source_owner').on(t.owner)]);
+export const questions = sqliteTable('questions', { id: text('id').primaryKey(), owner: text('owner').notNull(), sourceId: text('source_id'), data: text('data').notNull(), createdAt: text('created_at').notNull() }, t => [index('question_owner').on(t.owner)]);
+export const papers = sqliteTable('papers', { id: text('id').primaryKey(), owner: text('owner').notNull(), data: text('data').notNull(), updatedAt: text('updated_at').notNull() }, t => [index('paper_owner').on(t.owner)]);
