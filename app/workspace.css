@@ -216,6 +216,7 @@
 .paper-preview .question-images figcaption { font-family:var(--font-paper); }
 .preview-material { white-space:pre-wrap; overflow-wrap:anywhere; font-size:var(--fs-base); background:var(--surface-2); border-left:2px solid var(--line-strong); padding:14px 16px; margin-bottom:14px; line-height:1.8; }
 .answer-lines { font-size:var(--fs-sm); color:var(--ink-3); margin-top:18px; white-space:nowrap; overflow:hidden; }
+.answer-lines > div + div { margin-top:14px; }
 @media(max-width:1250px) { .filter-row { align-items:flex-start; } .review-actions { margin-left:0; } }
 @media(max-width:1150px) {
   .bank-layout { gap:20px; grid-template-columns:minmax(0,1fr) 270px; }

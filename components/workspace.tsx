@@ -16,7 +16,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { GRADES, TYPES, KNOWLEDGE, blankQuestion, demoQuestions, type Grade, type Question, type Source, type State, type Paper, type PaperItem } from '@/lib/model';
-import { buildQuestionUnits, filterQuestionUnits, buildPaperUnits, unitSelection, toggleQuestionUnit, removePaperUnit, movePaperUnit, unitHeading, isBlankPlaceholder, type QuestionUnit } from '@/lib/question-units';
+import { buildQuestionUnits, filterQuestionUnits, buildPaperUnits, unitSelection, toggleQuestionUnit, removePaperUnit, movePaperUnit, unitHeading, isBlankPlaceholder, answerLineCount, type QuestionUnit } from '@/lib/question-units';
 import { materialBlocks, sharedMaterialImages, optionColumns, type MaterialImage } from '@/lib/paper-layout';
 async function api<T>(path: string, body?: unknown, method?: string): Promise<T> { const result = await fetch('/api/workspace/' + path, { method: method || (body ? 'POST' : 'GET'), headers: body && !(body instanceof FormData) ? { 'Content-Type': 'application/json' } : undefined, body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined }); const data = await result.json() as T & {
     error?: string;
@@ -394,7 +394,7 @@ function Workspace() {
     {(unit.material || unit.sharedImages.length > 0) && <div className="preview-material"><MaterialContent text={unit.material} images={unit.sharedImages}/></div>}
     {unit.display.map((q, n) => <div className="preview-question" key={q.id}>
         {isBlankPlaceholder(q.stem) && q.options.length > 0 && !q.images.length ? <div className="preview-choice-line"><strong>{unit.composite ? n + 1 : i + 1}.</strong><QuestionOptions options={q.options}/></div> : <><h3>{unit.composite ? n + 1 : i + 1}. {isBlankPlaceholder(q.stem) ? '' : q.stem}</h3><QuestionImages q={q}/><QuestionOptions options={q.options}/></>}
-        {previewAnswers ? <div className="answer-block"><strong>答案：{q.answer || '待补充'}</strong><p>{q.analysis}</p></div> : !q.options.length && <div className="answer-lines">________________________________________________________________<br/><br/>________________________________________________________________</div>}
+        {previewAnswers ? <div className="answer-block"><strong>答案：{q.answer || '待补充'}</strong><p>{q.analysis}</p></div> : answerLineCount(q) > 0 && <div className="answer-lines">{Array.from({ length: answerLineCount(q) }, (_, k) => <div key={k}>________________________________________________________________</div>)}</div>}
     </div>)}
 </section>)}</div></DialogContent></Dialog><Toaster theme="light" position="top-center" richColors closeButton/></SidebarProvider>;
 }

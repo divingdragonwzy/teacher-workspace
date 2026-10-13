@@ -126,3 +126,9 @@ export function unitHeading(unit: QuestionUnit, index: number) {
 }
 
 export function isBlankPlaceholder(stem: string) { return /^第\s*\d+\s*空[（(]见共用材料[）)]$/.test(stem.trim()); }
+/** Writing lines under a question: none when the stem or passage already holds the blank to fill. */
+export function answerLineCount(q: Pick<Question, 'type' | 'stem' | 'options'>) {
+    if (q.options.length || isBlankPlaceholder(q.stem)) return 0;
+    if (q.type === '书面表达') return 7;
+    return /[_＿]{3,}/.test(q.stem) ? 0 : 2;
+}
